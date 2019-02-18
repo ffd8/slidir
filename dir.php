@@ -28,12 +28,12 @@ function dir_to_array($dir)
 	                if ($f->isFile()) {
 	                        $data[] = [ 'file' => $name,
 	                        'filetype' => $filetype,
-                            'totalPath' => $f->getPathname()
+                            'totalPath' => $f->getPathname(),
                              ];
 	                } else{
 	                        // Process the content of the directory.
 	                        $files = dir_to_array($path);
-                            $totalPath .= "/".$name ;
+                         //    $totalPath .= "/".$name ;
 	                        $data[] = [ 'dir'  => $files,
 	                                    'name' => $name];
 	                        // A directory has a 'name' attribute

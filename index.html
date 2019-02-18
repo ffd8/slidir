@@ -84,6 +84,9 @@
 			php dir to JSON listing:
 			https://stackoverflow.com/questions/34466362/how-to-get-a-list-of-files-of-subfolders-and-write-them-in-a-json-using-php
 
+			deep key JSON search:
+			https://stackoverflow.com/a/33876266/10885535
+
 			filetype from file:
 			http://php.net/manual/en/directoryiterator.getextension.php
 
@@ -119,7 +122,6 @@
 		vid = document.getElementById('slide-video'),
 		countdown = document.getElementById('countdown'),
 		nameholder = document.getElementById('name');
-		//nameholder.innerHTML = headline + "<br>🖼 bild[er]";
 		specialMsg(headline + "<br>🖼 bild[er]");
 
 		// grab data
@@ -130,11 +132,41 @@
 
 		// JSON data of recursive folders/files
 		var media = JSON.parse(request.responseText);
-		console.log(media);
+		var mediaJoined = [];
+
+		// get recursive info from dirs
+		media.forEach(function(f){
+			 var recMedia = [];
+			 deepKeySearch(f, 'totalPath', recMedia);
+			 mediaJoined.push({"dir":f.name, "files":recMedia});
+		});
+
+		// modified deep search + push to array
+		function deepKeySearch(obj, key, arr) {
+		  for (iKey in obj) {
+		    if (obj.hasOwnProperty(iKey)) {
+		      if(Array.isArray(obj[iKey])){
+		      	obj[iKey].forEach(function(tp){
+		      		if (tp.hasOwnProperty('totalPath')) {
+						arr.push(tp);
+					}else{
+						deepKeySearch(tp, key, arr);
+					}
+		      	})	
+		      }else if (typeof obj[iKey] === 'object' && obj[iKey] !== null) {
+		        var search = deepKeySearch(obj[iKey], key, arr);
+		        if (search !== undefined) {
+		          return search;
+		        }
+		      }
+		    }
+		  }
+		}
+
 		// continue from hash onward
 		if(window.location.hash.length > 0){
 			var curPos = window.location.hash.substring(1);
-			if(curPos < media.length){
+			if(curPos < mediaJoined.length){
 				mediaSel = curPos;
 				kickoffMedia();
 			}else{
@@ -147,21 +179,21 @@
 		// grab folder of media
 		function getMedia(){
 			playlist = [];
-			var curMedia = media[mediaSel];
-			var curDir = curMedia.name;
+			var curMedia = mediaJoined[mediaSel];
+			var curDir = curMedia.dir;
 			nameholder.style.display = 'none';
 			nameholder.innerHTML = curDir;
 
-			curMedia.dir.forEach(function(f){
+			curMedia.files.forEach(function(f){
 				var val = f.filetype.toLowerCase(),
 	            regImage = new RegExp("(.*?)\(png|jpg|gif|tiff|svg|webp)$"),
 	            regVideo = new RegExp("(.*?)\(mov|mp4|webm|ogg)$");
 
 	            // sort media type
 		        if (regImage.test(val)) {
-		        	playlist.push({"dir":curDir, "file":f.file, "type":"img"})
+		        	playlist.push({"dir":curDir, "totalPath":f.totalPath, "type":"img"})
 		        }else if(regVideo.test(val)){
-		        	playlist.push({"dir":curDir, "file":f.file, "type":"vid"})
+		        	playlist.push({"dir":curDir, "totalPath":f.totalPath, "type":"vid"})
 		        }
 
 			});
@@ -192,7 +224,7 @@
 
 			playlist = [];
 			if(dir == 'next'){
-				if(mediaSel < media.length-1){
+				if(mediaSel < mediaJoined.length-1){
 					mediaSel++;
 					kickoffMedia();
 				}else{
@@ -252,14 +284,14 @@
 
 		// swap between img + vid media
 		function togglePlayer(pl){
-			var mediaPath = "media/"+pl.dir+"/";
+			console.log(pl.totalPath);
 			if(pl.type == 'img'){
-				var imgPath = mediaPath+pl.file;
+				var imgPath = pl.totalPath;
 				img.style.backgroundImage = 'url("'+imgPath+'")';
 				img.style.display = "block";
 				vid.style.display = "none";
 			}else{
-				vid.src = mediaPath+pl.file;
+				vid.src = pl.totalPath;
 				vid.play();
 				img.style.display = "none";
 				vid.style.display = "block";
@@ -295,6 +327,57 @@
 				div.style.display = 'block';
 			}
 		}
+
+		// cycle through JSON
+		function findValues(obj, key){
+			return findValuesHelper(obj, key, []);
+		}
+
+		function findValuesHelper(obj, key, list) {
+			if (!obj) return list;
+			if (obj instanceof Array) {
+				for (var i in obj) {
+					list = list.concat(findValuesHelper(obj[i], key, []));
+				}
+				return list;
+			}
+			if (obj[key]) list.push(obj[key]);
+
+			if ((typeof obj == "object") && (obj !== null) ){
+				var children = Object.keys(obj);
+				if (children.length > 0){
+					for (i = 0; i < children.length; i++ ){
+						list = list.concat(findValuesHelper(obj[children[i]], key, []));
+					}
+				}
+			}
+			return list;
+		}
+
+		JSON.flatten = function (data) {
+		    var result = {};
+
+		    function recurse(cur, prop) {
+		        if (Object(cur) !== cur) {
+		            result[prop] = cur;
+		        } else if (Array.isArray(cur)) {
+		            for (var i = 0, l = cur.length; i < l; i++)
+		            recurse(cur[i], prop + "[" + i + "]");
+		            if (l == 0) result[prop] = [];
+		        } else {
+		            var isEmpty = true;
+		            for (var p in cur) {
+		                isEmpty = false;
+		                recurse(cur[p], prop ? prop + "." + p : p);
+		            }
+		            if (isEmpty && prop) result[prop] = {};
+		        }
+		    }
+		    recurse(data, "");
+		    return result;
+		};
+
+
 	</script>
 </body>
 </html>
