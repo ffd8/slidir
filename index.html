@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<!-- cc teddavis.org 2019 -->
+	<meta charset="utf-8">
+	<title></title>
+	<style type="text/css">
+		@font-face {
+			font-family: 'roboto_mono';
+			src: url('fonts/robotomono-regular-webfont.woff2') format('woff2'),
+			url('fonts/robotomono-regular-webfont.woff') format('woff');
+			font-weight: 400;
+			font-style: normal;
+		}
+		body{
+			margin:0;
+			cursor:cell !important;
+			background:#000;
+			font-family:'roboto_mono';
+			overflow:hidden;
+		}
+		#slide-image, #slide-video{
+			position:fixed;
+			z-index:0;
+			top:0;
+			left:0;
+			width:100vw;
+			height:100vh;
+			background-size: cover;
+			background-image:url('');
+		}
+		#slide-video{
+			background:none;
+		}
+		#slide-image-preload{
+			display:none;
+		}
+		#countdown{
+			position:fixed;
+			z-index:10;
+			bottom:0;
+			left:0;
+			height:10px;
+			mix-blend-mode:difference;
+			background:#fff;
+			width:100%;
+			display:none;
+		}
+		#name{
+			display:block;
+			position:fixed;
+			width:100vw;
+			height:100vh;
+			z-index:99;
+			color:#fff;
+			mix-blend-mode: difference;
+			font-size:8vw;
+			box-sizing: border-box;
+			padding:25px;
+		}
+	</style>
+</head>
+<body>
+	<div id="name"></div>
+	<div id="status"></div>
+	<div id="countdown"></div>
+	<div id="slide-image"></div>
+	<div id="slide-image-preload"></div>
+	<video autoplay muted loop id="slide-video">
+		<source id="slide-video-player" src="" type="video/mp4">
+	</video>
+
+	<script type="text/javascript">
+		/*
+
+			TODO:
+			- fix recursion on JS side
+			- check additional filetypes
+			- 
+
+
+
+			SOURCES:
+			php dir to JSON listing:
+			https://stackoverflow.com/questions/34466362/how-to-get-a-list-of-files-of-subfolders-and-write-them-in-a-json-using-php
+
+			filetype from file:
+			http://php.net/manual/en/directoryiterator.getextension.php
+
+			fullscreen video as background:
+			https://www.w3schools.com/howto/howto_css_fullscreen_video.asp
+
+			javascript check filetype:
+			https://stackoverflow.com/questions/4234589/validation-of-file-extension-before-uploading-file
+
+			html5 change video source w/ js:
+			https://stackoverflow.com/questions/5235145/changing-source-on-html5-video-tag
+
+			html change div backgroundimg w/ js:
+			https://stackoverflow.com/questions/21496905/how-to-change-the-background-image-of-div-using-javascript
+
+		*/
+
+		// PREFS
+		var headline = "ba thesis workshop",
+		mediaDir = "media",
+		mediaDelay = 5 * 60 * 1000, // 5min between media
+		slideDelay = 15 * 1000; // 15sec » overruled by 1min / slides
+
+		// init vars
+		var mediaSel = 0,
+		mediaTimer,
+		mediaTimeout,
+		playlist = [],
+		playSel = 0,
+		playTimer,
+		img = document.getElementById('slide-image'),
+		imgPreload = document.getElementById('slide-image-preload'),
+		vid = document.getElementById('slide-video'),
+		countdown = document.getElementById('countdown'),
+		nameholder = document.getElementById('name');
+		//nameholder.innerHTML = headline + "<br>🖼 bild[er]";
+		specialMsg(headline + "<br>🖼 bild[er]");
+
+		// grab data
+		var mediaPath = "dir.php?dir="+mediaDir;
+		var request = new XMLHttpRequest();
+		request.open("GET", mediaPath, false);
+		request.send(null);
+
+		// JSON data of recursive folders/files
+		var media = JSON.parse(request.responseText);
+		console.log(media);
+		// continue from hash onward
+		if(window.location.hash.length > 0){
+			var curPos = window.location.hash.substring(1);
+			if(curPos < media.length){
+				mediaSel = curPos;
+				kickoffMedia();
+			}else{
+				mediaSel = 0;
+				specialMsg(headline + "<br>🖼 bild[er]");
+			}
+			
+		}
+
+		// grab folder of media
+		function getMedia(){
+			playlist = [];
+			var curMedia = media[mediaSel];
+			var curDir = curMedia.name;
+			nameholder.style.display = 'none';
+			nameholder.innerHTML = curDir;
+
+			curMedia.dir.forEach(function(f){
+				var val = f.filetype.toLowerCase(),
+	            regImage = new RegExp("(.*?)\(png|jpg|gif|tiff|svg|webp)$"),
+	            regVideo = new RegExp("(.*?)\(mov|mp4|webm|ogg)$");
+
+	            // sort media type
+		        if (regImage.test(val)) {
+		        	playlist.push({"dir":curDir, "file":f.file, "type":"img"})
+		        }else if(regVideo.test(val)){
+		        	playlist.push({"dir":curDir, "file":f.file, "type":"vid"})
+		        }
+
+			});
+
+			//kickoff slideshow
+			playSel = 0;
+			initCountdown();
+			slideshow();
+		}
+
+		// display image, prep next
+		function slideshow(){
+			togglePlayer(playlist[playSel]);
+			playSel++;
+			if(playSel >= playlist.length){
+				playSel = 0;
+			}
+		}
+
+		// forward/backward media change
+		function swapMedia(dir){
+			clearTimers();
+
+			if(window.location.hash.length < 1 || nameholder.innerHTML.substring(0, 2) == "ba"){
+				kickoffMedia()
+				return false;
+			}
+
+			playlist = [];
+			if(dir == 'next'){
+				if(mediaSel < media.length-1){
+					mediaSel++;
+					kickoffMedia();
+				}else{
+					specialMsg(headline + "<br>🏁 feierabend"); // finished!
+				}
+			}else{
+				if(mediaSel > 0){
+					mediaSel--;
+					kickoffMedia();
+				}
+			}
+		}
+
+		// reset timers if manually changed media
+		function clearTimers(){
+			clearInterval(mediaTimer);
+			clearTimeout(playTimer);
+			countdown.style.display = 'none';
+		}
+
+		// store cur position as hash
+		function kickoffMedia(){
+			window.location.hash = mediaSel;
+			getMedia();
+		}
+
+		// setup timer countdown
+		function initCountdown(){
+			countdown.style.display = 'block';
+			var offset = 100/mediaDelay*100; // 100% / mediaDelay / 100 milis intervals
+			var init = 100;
+
+			mediaTimer = setInterval(() => {
+				init -= offset;
+				countdown.style.width = init + '%';
+			}, 100);
+
+			mediaTimeout = setTimeout(() => {
+				swapMedia('next');
+				clearInterval(mediaTimer);
+			}, mediaDelay+100);
+		}
+
+		// remove media for specialMsg
+		function clearMedia(){
+			clearTimers();
+			vid.style.display = "none";
+			img.style.display = "none";
+		}
+
+		// display txt
+		function specialMsg(txt){
+			clearMedia();
+			nameholder.innerHTML = txt;
+			nameholder.style.display = "block";
+		}
+
+		// swap between img + vid media
+		function togglePlayer(pl){
+			var mediaPath = "media/"+pl.dir+"/";
+			if(pl.type == 'img'){
+				var imgPath = mediaPath+pl.file;
+				img.style.backgroundImage = 'url("'+imgPath+'")';
+				img.style.display = "block";
+				vid.style.display = "none";
+			}else{
+				vid.src = mediaPath+pl.file;
+				vid.play();
+				img.style.display = "none";
+				vid.style.display = "block";
+			}
+
+			// preload
+			if(playlist[playSel].type == 'img'){
+					imgPreload.style.backgroundImage = 'url("'+mediaPath+playlist[playSel].file+'")';
+			}
+			playTimer = window.setTimeout(slideshow, 60*1000/playlist.length); // 1min / slides OR use slideDelay
+		}
+
+		// keypresses
+		window.onkeydown = function(event){
+			if(event.key == "ArrowRight"){ // next
+				swapMedia('next');
+			}else if(event.key == "ArrowLeft"){ // prev
+				swapMedia('prev');
+			}else if(event.keyCode == 32){ // kickoff media / next
+				swapMedia('next');
+			}else if(event.key == 'n'){ // toggle name
+				toggleDiv(nameholder);
+			}else if(event.key == 'p' || event.key == 'b'){ // display coffee break
+				specialMsg(headline + "<br>☕ break");
+			}
+		}
+
+		// toggle a div
+		function toggleDiv(div){
+			if(div.style.display == 'block'){
+				div.style.display = 'none';
+			}else{
+				div.style.display = 'block';
+			}
+		}
+	</script>
+</body>
+</html>
