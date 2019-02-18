@@ -14,7 +14,7 @@
 		}
 		body{
 			margin:0;
-			cursor:cell !important;
+			cursor:cell;
 			background:#000;
 			font-family:'roboto_mono';
 			overflow:hidden;
@@ -71,45 +71,16 @@
 	</video>
 
 	<script type="text/javascript">
-		/*
 
-			TODO:
-			- fix recursion on JS side
-			- check additional filetypes
-			- 
-
-
-
-			SOURCES:
-			php dir to JSON listing:
-			https://stackoverflow.com/questions/34466362/how-to-get-a-list-of-files-of-subfolders-and-write-them-in-a-json-using-php
-
-			deep key JSON search:
-			https://stackoverflow.com/a/33876266/10885535
-
-			filetype from file:
-			http://php.net/manual/en/directoryiterator.getextension.php
-
-			fullscreen video as background:
-			https://www.w3schools.com/howto/howto_css_fullscreen_video.asp
-
-			javascript check filetype:
-			https://stackoverflow.com/questions/4234589/validation-of-file-extension-before-uploading-file
-
-			html5 change video source w/ js:
-			https://stackoverflow.com/questions/5235145/changing-source-on-html5-video-tag
-
-			html change div backgroundimg w/ js:
-			https://stackoverflow.com/questions/21496905/how-to-change-the-background-image-of-div-using-javascript
-
-		*/
-
-		// PREFS
+		/*	PREFS	*/
 		var headline = "ba thesis workshop",
 		mediaDir = "media",
-		mediaDelay = 5 * 60 * 1000, // 5min between media
-		slideDelay = 15 * 1000; // 15sec » overruled by 1min / slides
+		mediaDelay = 5 * 60 * 1000, // delay between directory, 5 * 60sec * 1000millis = 5min
+		slideDelay = 60; // time in sec for slides to loop within, ie. 60s / 4slides = 15sec per slide
 
+
+
+		/*	MAGIC	*/
 		// init vars
 		var mediaSel = 0,
 		mediaTimer,
@@ -301,7 +272,7 @@
 			if(playlist[playSel].type == 'img'){
 					imgPreload.style.backgroundImage = 'url("'+mediaPath+playlist[playSel].file+'")';
 			}
-			playTimer = window.setTimeout(slideshow, 60*1000/playlist.length); // 1min / slides OR use slideDelay
+			playTimer = window.setTimeout(slideshow, slideDelay * 1000/playlist.length);
 		}
 
 		// keypresses
@@ -377,6 +348,55 @@
 		    return result;
 		};
 
+		(function() {
+		    var mouseTimer = null, cursorVisible = true;
+
+		    function disappearCursor() {
+		        mouseTimer = null;
+		        document.body.style.cursor = "none";
+		        cursorVisible = false;
+		    }
+
+		    document.onmousemove = function() {
+		        if (mouseTimer) {
+		            window.clearTimeout(mouseTimer);
+		        }
+		        if (!cursorVisible) {
+		            document.body.style.cursor = "cell";
+		            cursorVisible = true;
+		        }
+		        mouseTimer = window.setTimeout(disappearCursor, 1000);
+		    };
+		})();
+
+		/*
+
+			SOURCES:
+			php dir to JSON listing:
+			https://stackoverflow.com/questions/34466362/how-to-get-a-list-of-files-of-subfolders-and-write-them-in-a-json-using-php
+
+			deep key JSON search:
+			https://stackoverflow.com/a/33876266/10885535
+
+			filetype from file:
+			http://php.net/manual/en/directoryiterator.getextension.php
+
+			fullscreen video as background:
+			https://www.w3schools.com/howto/howto_css_fullscreen_video.asp
+
+			javascript check filetype:
+			https://stackoverflow.com/questions/4234589/validation-of-file-extension-before-uploading-file
+
+			html5 change video source w/ js:
+			https://stackoverflow.com/questions/5235145/changing-source-on-html5-video-tag
+
+			html change div backgroundimg w/ js:
+			https://stackoverflow.com/questions/21496905/how-to-change-the-background-image-of-div-using-javascript
+
+			auto-hide cursor:
+			https://stackoverflow.com/a/4483383/10885535
+
+		*/
 
 	</script>
 </body>
