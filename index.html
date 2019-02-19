@@ -169,10 +169,14 @@
 
 			});
 
-			//kickoff slideshow
-			playSel = 0;
-			initCountdown();
-			slideshow();
+			if(playlist.length > 0){
+				//kickoff slideshow
+				playSel = 0;
+				initCountdown();
+				slideshow();
+			}else{
+				specialMsg(curDir+'<br>🤔 no files?')
+			}
 		}
 
 		// display image, prep next
@@ -255,7 +259,7 @@
 
 		// swap between img + vid media
 		function togglePlayer(pl){
-			console.log(pl.totalPath);
+			//console.log(pl.totalPath);
 			if(pl.type == 'img'){
 				var imgPath = pl.totalPath;
 				img.style.backgroundImage = 'url("'+imgPath+'")';
