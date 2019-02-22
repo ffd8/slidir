@@ -66,7 +66,7 @@
 	<div id="countdown"></div>
 	<div id="slide-image"></div>
 	<div id="slide-image-preload"></div>
-	<video autoplay muted loop id="slide-video">
+	<video autoplay loop id="slide-video">
 		<source id="slide-video-player" src="" type="video/mp4">
 	</video>
 
@@ -76,7 +76,7 @@
 		var headline = "ba thesis workshop",
 		mediaDir = "media",
 		mediaDelay = 5 * 60 * 1000, // delay between directory, 5 * 60sec * 1000millis = 5min
-		slideDelay = 60; // time in sec for slides to loop within, ie. 60s / 4slides = 15sec per slide
+		slidesPlayCount = 5; // number of times to play slides throughout mediaDelay (total time)
 
 
 
@@ -88,6 +88,7 @@
 		playlist = [],
 		playSel = 0,
 		playTimer,
+		slideDelay = mediaDelay/slidesPlayCount, // time in sec for slides to loop within, ie. 60s / 4slides = 15sec per slide
 		img = document.getElementById('slide-image'),
 		imgPreload = document.getElementById('slide-image-preload'),
 		vid = document.getElementById('slide-video'),
@@ -157,7 +158,7 @@
 
 			curMedia.files.forEach(function(f){
 				var val = f.filetype.toLowerCase(),
-	            regImage = new RegExp("(.*?)\(png|jpg|gif|tiff|svg|webp)$"),
+	            regImage = new RegExp("(.*?)\(png|jpg|gif|tiff|svg|webp|jpeg)$"),
 	            regVideo = new RegExp("(.*?)\(mov|mp4|webm|ogg)$");
 
 	            // sort media type
@@ -217,6 +218,7 @@
 		function clearTimers(){
 			clearInterval(mediaTimer);
 			clearTimeout(playTimer);
+			clearTimeout(mediaTimeout);
 			countdown.style.display = 'none';
 		}
 
@@ -239,7 +241,6 @@
 
 			mediaTimeout = setTimeout(() => {
 				swapMedia('next');
-				clearInterval(mediaTimer);
 			}, mediaDelay+100);
 		}
 
@@ -264,6 +265,7 @@
 				var imgPath = pl.totalPath;
 				img.style.backgroundImage = 'url("'+imgPath+'")';
 				img.style.display = "block";
+				vid.src = '';
 				vid.style.display = "none";
 			}else{
 				vid.src = pl.totalPath;
@@ -276,7 +278,7 @@
 			if(playlist[playSel].type == 'img'){
 					imgPreload.style.backgroundImage = 'url("'+mediaPath+playlist[playSel].file+'")';
 			}
-			playTimer = window.setTimeout(slideshow, slideDelay * 1000/playlist.length);
+			playTimer = window.setTimeout(slideshow, slideDelay/playlist.length);
 		}
 
 		// keypresses
